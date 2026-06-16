@@ -1,0 +1,81 @@
+# Homework 4
+
+
+# Question 1
+
+Based on X1, X2, and X3, the largest possible model would be 4 x 6 x 3 = 72.
+
+The smallest possible model would be a model with all same outcomes, which would be 1.
+
+By calculating the probability that n=30 observations can be found as cells = 72 * (1 - 1/72)^30, which would be 
+```{r}
+cells <- 72 * (1 - 1/72)^30
+cells
+```
+This gives us the number of unobserved cells
+
+# Question 2
+```{r}
+x_0 <- 0.45
+x_a <- 0.38
+x_b <- 0.57
+y_a <- 1.92
+y_b <- 2.04
+
+w_a <- (x_b - x_0) / (x_b - x_a)
+w_a
+w_b <- (x_0 - x_a) / (x_b - x_a)
+w_b
+
+w_a * y_a + w_b * y_b
+```
+
+We can identify that w_a has a higher weight than w_b, which means that the weight would be more weighted towards y_a. By finding which x value is closer, we know which point has a greater influence.
+
+# Question 3
+```{r}
+# x = 0.22, 0.03, 0.11
+x_02 = (2.14 + 2.26 + 2.47)/3
+x_02
+# x = .37, .57, .40
+x_05 = (1.89 + 1.99 + 2.1)/3
+x_05
+
+#x = 0.66, 0.77, 0.73
+x_07 = (1.88 + 1.92 + 1.98)/3
+x_07
+```
+
+
+# Question 4
+
+```{r}
+x <- c(0.22, 0.37, 0.57, 0.66, 0.03, 0.92, 0.77, 0.73, 0.11, 0.40)
+y <- c(2.14, 1.89, 1.99, 1.88, 2.26, 2.11, 1.92, 1.98, 2.47, 2.10)
+
+predict_3nn <- function(x_new, x_train, y_train) {
+  sapply(x_new, function(xi) {
+    dists <- abs(x_train - xi)
+    nearest_idx <- order(dists)[1:3]
+    mean(y_train[nearest_idx])
+  })
+}
+
+x_grid <- seq(min(x), max(x), length.out = 500)
+y_pred <- predict_3nn(x_grid, x, y)
+
+plot(x, y, pch = 16, col = "steelblue", 
+     xlab = "x", ylab = "y", 
+     main = "3-Nearest Neighbor Prediction")
+
+lines(x_grid, y_pred, col = "tomato", lwd = 2)
+```
+
+# Question 5
+
+The "largest model" that has an estimate for every covariate combination can be a poor choice because although it can fit the training data, each estimate is based on its own cell. There is no share of information between cells so in a real case scenario where there may be unknown cells, there is no way to create an estimate for these cells in a largest model.
+
+This ties to information sharing in the way that there needs to be some form of information that is shared between cells to create a rounded out estimate for each cell.
+
+If the largest model had to be the reasonable choice, every cell would need to have some form of an estimate where each cell genuinely stands as its own. Each cell would essentially be independent to the point where the age or blood pressure of someone would not be the same as someone with a year difference.
+

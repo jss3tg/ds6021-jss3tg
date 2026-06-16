@@ -88,5 +88,15 @@
     "crumbs": [
       "<span class='chapter-number'>5</span>  <span class='chapter-title'>Homework 3</span>"
     ]
+  },
+  {
+    "objectID": "HW4.html",
+    "href": "HW4.html",
+    "title": "6  Homework 4",
+    "section": "",
+    "text": "7 Question 1\nBased on X1, X2, and X3, the largest possible model would be 4 x 6 x 3 = 72.\nThe smallest possible model would be a model with all same outcomes, which would be 1.\nBy calculating the probability that n=30 observations can be found as cells = 72 * (1 - 1/72)^30, which would be\n\ncells &lt;- 72 * (1 - 1/72)^30\ncells\n\n[1] 47.3269\n\n\nThis gives us the number of unobserved cells\n\n\n8 Question 2\n\nx_0 &lt;- 0.45\nx_a &lt;- 0.38\nx_b &lt;- 0.57\ny_a &lt;- 1.92\ny_b &lt;- 2.04\n\nw_a &lt;- (x_b - x_0) / (x_b - x_a)\nw_a\n\n[1] 0.6315789\n\nw_b &lt;- (x_0 - x_a) / (x_b - x_a)\nw_b\n\n[1] 0.3684211\n\nw_a * y_a + w_b * y_b\n\n[1] 1.964211\n\n\nWe can identify that w_a has a higher weight than w_b, which means that the weight would be more weighted towards y_a. By finding which x value is closer, we know which point has a greater influence.\n\n\n9 Question 3\n\n# x = 0.22, 0.03, 0.11\nx_02 = (2.14 + 2.26 + 2.47)/3\nx_02\n\n[1] 2.29\n\n# x = .37, .57, .40\nx_05 = (1.89 + 1.99 + 2.1)/3\nx_05\n\n[1] 1.993333\n\n#x = 0.66, 0.77, 0.73\nx_07 = (1.88 + 1.92 + 1.98)/3\nx_07\n\n[1] 1.926667\n\n\n\n\n10 Question 4\n\nx &lt;- c(0.22, 0.37, 0.57, 0.66, 0.03, 0.92, 0.77, 0.73, 0.11, 0.40)\ny &lt;- c(2.14, 1.89, 1.99, 1.88, 2.26, 2.11, 1.92, 1.98, 2.47, 2.10)\n\npredict_3nn &lt;- function(x_new, x_train, y_train) {\n  sapply(x_new, function(xi) {\n    dists &lt;- abs(x_train - xi)\n    nearest_idx &lt;- order(dists)[1:3]\n    mean(y_train[nearest_idx])\n  })\n}\n\nx_grid &lt;- seq(min(x), max(x), length.out = 500)\ny_pred &lt;- predict_3nn(x_grid, x, y)\n\nplot(x, y, pch = 16, col = \"steelblue\", \n     xlab = \"x\", ylab = \"y\", \n     main = \"3-Nearest Neighbor Prediction\")\n\nlines(x_grid, y_pred, col = \"tomato\", lwd = 2)\n\n\n\n\n\n\n\n\n\n\n11 Question 5\nThe “largest model” that has an estimate for every covariate combination can be a poor choice because although it can fit the training data, each estimate is based on its own cell. There is no share of information between cells so in a real case scenario where there may be unknown cells, there is no way to create an estimate for these cells in a largest model.\nThis ties to information sharing in the way that there needs to be some form of information that is shared between cells to create a rounded out estimate for each cell.\nIf the largest model had to be the reasonable choice, every cell would need to have some form of an estimate where each cell genuinely stands as its own. Each cell would essentially be independent to the point where the age or blood pressure of someone would not be the same as someone with a year difference.",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>Homework 4</span>"
+    ]
   }
 ]
