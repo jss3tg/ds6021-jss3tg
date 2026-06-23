@@ -98,5 +98,65 @@
     "crumbs": [
       "<span class='chapter-number'>6</span>  <span class='chapter-title'>Homework 4</span>"
     ]
+  },
+  {
+    "objectID": "HW5.html",
+    "href": "HW5.html",
+    "title": "7  Homework 5",
+    "section": "",
+    "text": "8 Question 1 and 2\nset.seed(42)\nrequire(ggplot2)\n\nLoading required package: ggplot2\n\n\nWarning: package 'ggplot2' was built under R version 4.5.3\n\nidx_tr &lt;- sample(nrow(abalone), size = floor(0.7 * nrow(abalone)))\ntrain  &lt;- abalone[ idx_tr, ]\ntest   &lt;- abalone[-idx_tr, ]\n\nX_train_enc &lt;- model.matrix(~ sex + length + diameter + height + \n                              whole_wt + shucked_wt + viscera_wt + shell_wt - 1, \n                            data = train)\n\nX_test_enc  &lt;- model.matrix(~ sex + length + diameter + height + \n                              whole_wt + shucked_wt + viscera_wt + shell_wt - 1, \n                            data = test)\n\ntrain_mean &lt;- colMeans(X_train_enc)\ntrain_sd   &lt;- apply(X_train_enc, 2, sd)\n\nX_train_sc &lt;- scale(X_train_enc, center = train_mean, scale = train_sd)\nX_test_sc  &lt;- scale(X_test_enc, center = train_mean, scale = train_sd)",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Homework 5</span>"
+    ]
+  },
+  {
+    "objectID": "HW5.html#knn",
+    "href": "HW5.html#knn",
+    "title": "7  Homework 5",
+    "section": "8.1 KNN",
+    "text": "8.1 KNN\n\nrequire(FNN)\n\nLoading required package: FNN\n\n\nWarning: package 'FNN' was built under R version 4.5.3\n\n#install.packages(\"FNN\")\n\nknn_fit &lt;- FNN::knn.reg(\n  train = X_train_sc, \n  test  = X_test_sc, \n  y     = train$rings, \n  k     = 15 \n)\n\npred_knn &lt;- knn_fit$pred\np_knn &lt;- ggplot(data.frame(actual = test$rings, pred = pred_knn), aes(x = pred, y = actual)) +\n  geom_point(alpha = 0.15, size = 1, color = \"steelblue\") +\n  geom_smooth(method = \"loess\", se = FALSE, color = \"#C0392B\", linewidth = 1) +\n  geom_abline(slope = 1, intercept = 0, linetype = \"dashed\", color = \"gray40\") +\n  labs(x = \"predicted\", y = \"actual\", title = \"k-nearest neighbors\") +\n  theme_bw(base_size = 12)\n\nprint(p_knn)\n\n`geom_smooth()` using formula = 'y ~ x'\n\n\n\n\n\n\n\n\nmse_knn &lt;- mean((test$rings - pred_knn)^2)\nprint(paste(\"knn MSE:\", mse_knn))\n\n[1] \"knn MSE: 4.97490342016658\"",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Homework 5</span>"
+    ]
+  },
+  {
+    "objectID": "HW5.html#ranger",
+    "href": "HW5.html#ranger",
+    "title": "7  Homework 5",
+    "section": "8.2 Ranger",
+    "text": "8.2 Ranger\n\nrequire(ranger)\n\nLoading required package: ranger\n\n\nWarning: package 'ranger' was built under R version 4.5.3\n\n#install.packages(\"ranger\")\n\nrf_fit &lt;- ranger(rings ~ ., data = train, num.trees = 500, seed = 42)\npred_rf &lt;- predict(rf_fit, data = test)$predictions\n\np_rf &lt;- ggplot(data.frame(actual = test$rings, pred = pred_rf), aes(x = pred, y = actual)) +\n  geom_point(alpha = 0.15, size = 1, color = \"steelblue\") +\n  geom_smooth(method = \"loess\", se = FALSE, color = \"#C0392B\", linewidth = 1) +\n  geom_abline(slope = 1, intercept = 0, linetype = \"dashed\", color = \"gray40\") +\n  labs(x = \"predicted\", y = \"actual\", title = \"ranger\") +\n  theme_bw(base_size = 12)\n\nprint(p_rf)\n\n`geom_smooth()` using formula = 'y ~ x'\n\n\n\n\n\n\n\n\nmse_rf &lt;- mean((test$rings - pred_rf)^2)\nprint(paste(\"ranger MSE:\", mse_rf))\n\n[1] \"ranger MSE: 4.66221162102411\"",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Homework 5</span>"
+    ]
+  },
+  {
+    "objectID": "HW5.html#orm",
+    "href": "HW5.html#orm",
+    "title": "7  Homework 5",
+    "section": "8.3 ORM",
+    "text": "8.3 ORM\n\nrequire(rms)\n\nLoading required package: rms\n\n\nWarning: package 'rms' was built under R version 4.5.3\n\n\nLoading required package: Hmisc\n\n\nWarning: package 'Hmisc' was built under R version 4.5.3\n\n\n\nAttaching package: 'Hmisc'\n\n\nThe following objects are masked from 'package:base':\n\n    format.pval, units\n\n#install.packages(\"rms\")\ndd_abalone &lt;- datadist(train)\noptions(datadist = \"dd_abalone\")\n\norm_fit &lt;- orm(rings ~ sex + rcs(length, 3) + rcs(diameter, 3) + \n  rcs(height, 3) + rcs(whole_wt, 3) + rcs(shucked_wt, 3) + \n  rcs(viscera_wt, 3) + rcs(shell_wt, 3), data = train)\n\nmfun &lt;- Mean(orm_fit)\npred_orm &lt;- mfun(predict(orm_fit, newdata = test))\n\np_orm &lt;- ggplot(data.frame(actual = test$rings, pred = pred_orm), aes(x = pred, y = actual)) +\n  geom_point(alpha = 0.15, size = 1, color = \"steelblue\") +\n  geom_smooth(method = \"loess\", se = FALSE, color = \"#C0392B\", linewidth = 1) +\n  geom_abline(slope = 1, intercept = 0, linetype = \"dashed\", color = \"gray40\") +\n  labs(x = \"predicted\", y = \"actual\", title = \"ordinal regression\") +\n  theme_bw(base_size = 12)\n\nprint(p_orm)\n\n`geom_smooth()` using formula = 'y ~ x'\n\n\n\n\n\n\n\n\nmse_orm &lt;- mean((test$rings - pred_orm)^2)\nprint(paste(\"orm MSE:\", mse_orm))\n\n[1] \"orm MSE: 4.60557478582482\"",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Homework 5</span>"
+    ]
+  },
+  {
+    "objectID": "HW5.html#lm",
+    "href": "HW5.html#lm",
+    "title": "7  Homework 5",
+    "section": "8.4 LM",
+    "text": "8.4 LM\n\nlm_fit  &lt;- lm(rings ~ sex + rcs(length, 3) + rcs(diameter, 3) + \n  rcs(height, 3) + rcs(whole_wt, 3) + rcs(shucked_wt, 3) + \n  rcs(viscera_wt, 3) + rcs(shell_wt, 3), data = train)\n\npred_lm &lt;- predict(lm_fit, test)\np_lm &lt;- ggplot(data.frame(actual = test$rings, pred = pred_lm), aes(x = pred, y = actual)) +\n  geom_point(alpha = 0.15, size = 1, color = \"steelblue\") +\n  geom_smooth(method = \"loess\", se = FALSE, color = \"#C0392B\", linewidth = 1) +\n  geom_abline(slope = 1, intercept = 0, linetype = \"dashed\", color = \"gray40\") +\n  labs(x = \"predicted\", y = \"actual\", title = \"linear regression\") +\n  theme_bw(base_size = 12)\n\nprint(p_lm)\n\n`geom_smooth()` using formula = 'y ~ x'\n\n\n\n\n\n\n\n\nmse_lm &lt;- mean((test$rings - pred_lm)^2)\nprint(paste(\"lm MSE:\", mse_lm))\n\n[1] \"lm MSE: 4.75056827160533\"",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Homework 5</span>"
+    ]
+  },
+  {
+    "objectID": "HW5.html#neural-network",
+    "href": "HW5.html#neural-network",
+    "title": "7  Homework 5",
+    "section": "8.5 Neural Network",
+    "text": "8.5 Neural Network\n\nrequire(nnet)\n\nLoading required package: nnet\n\n\nWarning: package 'nnet' was built under R version 4.5.3\n\n#install.packages(\"nnet\")\n\nnn_fit &lt;- nnet(y = train$rings, x = X_train_sc,\n               size = 8, linout = TRUE, trace = FALSE)\n\npred_nn &lt;- as.numeric(predict(nn_fit, newdata = X_test_sc))\np_nn &lt;- ggplot(data.frame(actual = test$rings, pred = pred_nn), aes(x = pred, y = actual)) +\n  geom_point(alpha = 0.15, size = 1, color = \"steelblue\") +\n  geom_smooth(method = \"loess\", se = FALSE, color = \"#C0392B\", linewidth = 1) +\n  geom_abline(slope = 1, intercept = 0, linetype = \"dashed\", color = \"gray40\") +\n  labs(x = \"predicted\", y = \"actual\", title = \"neural network\") +\n  theme_bw(base_size = 12)\n\nprint(p_nn)\n\n`geom_smooth()` using formula = 'y ~ x'\n\n\n\n\n\n\n\n\nmse_nn &lt;- mean((test$rings - pred_nn)^2)\nprint(paste(\"neural network MSE:\", mse_nn))\n\n[1] \"neural network MSE: 4.45718326877034\"",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Homework 5</span>"
+    ]
   }
 ]

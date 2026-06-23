@@ -1,0 +1,159 @@
+# Homework 5
+
+```{r}
+abalone <- read.csv(
+  "https://archive.ics.uci.edu/ml/machine-learning-databases/abalone/abalone.data",
+  header = FALSE,
+  col.names = c("sex","length","diameter","height",
+                "whole_wt","shucked_wt","viscera_wt","shell_wt","rings"))
+abalone$sex <- factor(abalone$sex)
+```
+
+# Question 1 and 2
+
+```{r}
+set.seed(42)
+require(ggplot2)
+
+idx_tr <- sample(nrow(abalone), size = floor(0.7 * nrow(abalone)))
+train  <- abalone[ idx_tr, ]
+test   <- abalone[-idx_tr, ]
+
+X_train_enc <- model.matrix(~ sex + length + diameter + height + 
+                              whole_wt + shucked_wt + viscera_wt + shell_wt - 1, 
+                            data = train)
+
+X_test_enc  <- model.matrix(~ sex + length + diameter + height + 
+                              whole_wt + shucked_wt + viscera_wt + shell_wt - 1, 
+                            data = test)
+
+train_mean <- colMeans(X_train_enc)
+train_sd   <- apply(X_train_enc, 2, sd)
+
+X_train_sc <- scale(X_train_enc, center = train_mean, scale = train_sd)
+X_test_sc  <- scale(X_test_enc, center = train_mean, scale = train_sd)
+
+```
+
+
+## KNN
+```{r}
+require(FNN)
+#install.packages("FNN")
+
+knn_fit <- FNN::knn.reg(
+  train = X_train_sc, 
+  test  = X_test_sc, 
+  y     = train$rings, 
+  k     = 15 
+)
+
+pred_knn <- knn_fit$pred
+p_knn <- ggplot(data.frame(actual = test$rings, pred = pred_knn), aes(x = pred, y = actual)) +
+  geom_point(alpha = 0.15, size = 1, color = "steelblue") +
+  geom_smooth(method = "loess", se = FALSE, color = "#C0392B", linewidth = 1) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray40") +
+  labs(x = "predicted", y = "actual", title = "k-nearest neighbors") +
+  theme_bw(base_size = 12)
+
+print(p_knn)
+mse_knn <- mean((test$rings - pred_knn)^2)
+print(paste("knn MSE:", mse_knn))
+```
+
+## Ranger
+```{r}
+
+require(ranger)
+#install.packages("ranger")
+
+rf_fit <- ranger(rings ~ ., data = train, num.trees = 500, seed = 42)
+pred_rf <- predict(rf_fit, data = test)$predictions
+
+p_rf <- ggplot(data.frame(actual = test$rings, pred = pred_rf), aes(x = pred, y = actual)) +
+  geom_point(alpha = 0.15, size = 1, color = "steelblue") +
+  geom_smooth(method = "loess", se = FALSE, color = "#C0392B", linewidth = 1) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray40") +
+  labs(x = "predicted", y = "actual", title = "ranger") +
+  theme_bw(base_size = 12)
+
+print(p_rf)
+mse_rf <- mean((test$rings - pred_rf)^2)
+print(paste("ranger MSE:", mse_rf))
+```
+
+## ORM
+
+```{r}
+require(rms)
+#install.packages("rms")
+dd_abalone <- datadist(train)
+options(datadist = "dd_abalone")
+
+orm_fit <- orm(rings ~ sex + rcs(length, 3) + rcs(diameter, 3) + 
+  rcs(height, 3) + rcs(whole_wt, 3) + rcs(shucked_wt, 3) + 
+  rcs(viscera_wt, 3) + rcs(shell_wt, 3), data = train)
+
+mfun <- Mean(orm_fit)
+pred_orm <- mfun(predict(orm_fit, newdata = test))
+
+p_orm <- ggplot(data.frame(actual = test$rings, pred = pred_orm), aes(x = pred, y = actual)) +
+  geom_point(alpha = 0.15, size = 1, color = "steelblue") +
+  geom_smooth(method = "loess", se = FALSE, color = "#C0392B", linewidth = 1) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray40") +
+  labs(x = "predicted", y = "actual", title = "ordinal regression") +
+  theme_bw(base_size = 12)
+
+print(p_orm)
+mse_orm <- mean((test$rings - pred_orm)^2)
+print(paste("orm MSE:", mse_orm))
+```
+
+## LM
+
+```{r}
+lm_fit  <- lm(rings ~ sex + rcs(length, 3) + rcs(diameter, 3) + 
+  rcs(height, 3) + rcs(whole_wt, 3) + rcs(shucked_wt, 3) + 
+  rcs(viscera_wt, 3) + rcs(shell_wt, 3), data = train)
+
+pred_lm <- predict(lm_fit, test)
+p_lm <- ggplot(data.frame(actual = test$rings, pred = pred_lm), aes(x = pred, y = actual)) +
+  geom_point(alpha = 0.15, size = 1, color = "steelblue") +
+  geom_smooth(method = "loess", se = FALSE, color = "#C0392B", linewidth = 1) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray40") +
+  labs(x = "predicted", y = "actual", title = "linear regression") +
+  theme_bw(base_size = 12)
+
+print(p_lm)
+mse_lm <- mean((test$rings - pred_lm)^2)
+print(paste("lm MSE:", mse_lm))
+```
+
+## Neural Network
+
+```{r}
+require(nnet)
+#install.packages("nnet")
+
+nn_fit <- nnet(y = train$rings, x = X_train_sc,
+               size = 8, linout = TRUE, trace = FALSE)
+
+pred_nn <- as.numeric(predict(nn_fit, newdata = X_test_sc))
+p_nn <- ggplot(data.frame(actual = test$rings, pred = pred_nn), aes(x = pred, y = actual)) +
+  geom_point(alpha = 0.15, size = 1, color = "steelblue") +
+  geom_smooth(method = "loess", se = FALSE, color = "#C0392B", linewidth = 1) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray40") +
+  labs(x = "predicted", y = "actual", title = "neural network") +
+  theme_bw(base_size = 12)
+
+print(p_nn)
+mse_nn <- mean((test$rings - pred_nn)^2)
+print(paste("neural network MSE:", mse_nn))
+```
+
+
+# Question 3
+Based on the MSE alone, the best model would be the Neural Network model with the lowest MSE value. In terms of another model that has lower MSE and good calibration, the ORM model would be another best model.
+
+If we are to determine the best model, we would consider how many parameters that the model considers, the interpretability, the MSE, and the level of calibration. If we are looking for "black boxes" of information, we can consider the Neural Network model because of its low MSE value. The random forest model gave a similar level of MSE and can be set up with less pre-processing as ORM or Neural network would. ORM provides the aspect of multiple parameters and interpretability while also providing a reasonable level of MSE.
+
