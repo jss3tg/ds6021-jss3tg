@@ -1,0 +1,57 @@
+# Homework 6
+
+# Question 1
+
+In $$Y = X\beta + \epsilon$$
+
+Y is n x 1 outcome vector for the medical insurance charges where n represents every individual counted in the dataset.
+
+X represents the matrix of predictor variables. The first column would be all ones as it would be the intercept. The following columns would be the predictor variables which would be age or bmi and the actual variables that will help identify the research question such as smoker or sex.
+
+B would be a similar structure where the first column B_0 would represent the intercept's actual value. The remaining Bs would represent the coefficient of the predictors used in X.
+
+
+# Question 2
+
+The research question proposes: Does smoking increase expected medical insurance charges, and by how much?
+
+The model answers this question by outputting the predicted medical insurance charges that would be generated for each individual. Each individual will have various of the predictor variables that will be held constant while we can view the indicator variable that shows whether an individual is a smoker or not. This lets us view the differences between the two categories to unerstand the difference in charges. 
+
+# Question 3
+```{r}
+library(dplyr)
+library(rms)
+
+insurance <- read.csv("insurance.csv")
+
+fit_lm <- lm(charges ~ age + sex + bmi + children + smoker + region, data = insurance)
+summary(fit_lm)
+
+confint(fit_lm, "smokeryes")
+```
+
+Based on the smokeryes variable, the smoking coeffecient is calculated to be 23848.50 and this indicates that smokers' estimated medical insurance charges are $23,848.50 higher than non-smokers.
+
+# Question 4
+```{r}
+dd <- datadist(insurance)
+options(datadist = "dd")
+
+fit_ols <- ols(charges ~ age + sex + bmi + children + smoker + region, data = insurance)
+fit_ols
+summary(fit_ols)
+```
+
+For the most part, the results are similar to the lm() model. The smoking coeffecient, smokeryes, are nearly identical in value (along with the lower and upper 95% bounds). The ols() model has additional outputs like the Model Likelihood Ratio Test, Discrimination Indexes, and the g- index.
+
+# Question 5
+
+R creates ultimately 3 additional indicator variables as that would represent each of the 4 levels. Based on alphabetical order, the northeast would be the reference level.
+```{r}
+fit_cell <- lm(charges ~ region - 1 + age + sex + bmi + children + smoker, data = insurance)
+summary(fit_cell)
+
+head(predict(fit_lm))
+head(predict(fit_cell))
+```
+
