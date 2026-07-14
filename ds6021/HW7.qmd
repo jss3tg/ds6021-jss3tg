@@ -1,0 +1,96 @@
+# Homework 7
+
+```{r}
+library(ISLR)
+library(rms)
+library(car)
+
+data(Wage)
+dd_wage <- datadist(Wage)
+options(datadist = "dd_wage")
+```
+
+# Question 1
+```{r}
+fit_lin_lm <- lm(wage ~ age + education + race, data = Wage)
+fit_lin_rms <- ols(wage ~ age + education + race, data = Wage)
+
+crPlots(fit_lin_lm, terms = ~ age, 
+        main = "component and residual plot",
+        col = "blue", pch = 16)
+
+plot(rms::Predict(fit_lin_rms, age), 
+     xlab = "age", ylab = "predicted wage",
+     main = "pep")
+```
+
+Based on the age and wage relationship, there is a slight non linear relationship.
+
+# Question 2
+
+```{r}
+fit_spline <- ols(wage ~ rcs(age, 4) + education + race, data = Wage, x = TRUE, y = TRUE)
+
+plot(rms::Predict(fit_spline, age), 
+     xlab = "age", ylab = "predicted wage",
+     main = "pep")
+```
+
+There is a large difference in the implied curve compared to the linear fit. The implied curve has a large increase until around age 40, and then a gradual decrease.
+
+# Question 3
+```{r}
+set.seed(7)
+k <- 10
+folds <- sample(1:k, nrow(Wage), replace = TRUE)
+
+mse_lin <- numeric(k)
+mse_spline <- numeric(k)
+
+for(i in 1:k) {
+  train_data <- Wage[folds != i, ]
+  test_data  <- Wage[folds == i, ]
+  
+  m_lin <- lm(wage ~ age + education + race, data = train_data)
+  m_spl <- lm(wage ~ rcs(age, 4) + education + race, data = train_data)
+  
+  pred_lin <- predict(m_lin, newdata = test_data)
+  pred_spl <- predict(m_spl, newdata = test_data)
+  
+  mse_lin[i] <- mean((test_data$wage - pred_lin)^2)
+  mse_spline[i] <- mean((test_data$wage - pred_spl)^2)
+}
+
+cat("linear model:", mean(mse_lin), "\n")
+cat("spline model:", mean(mse_spline), "\n")
+```
+
+Yes, based on the mse values, the spline model has a lower mean squared error than the linear model.
+
+# Question 4
+```{r}
+fit_lin_cal <- ols(wage ~ age + education + race, data = Wage, x = TRUE, y = TRUE)
+
+cal_lin <- calibrate(fit_lin_cal, method = "boot", B = 100)
+cal_spline <- calibrate(fit_spline, method = "boot", B = 100)
+
+par(mfrow = c(1, 2))
+
+plot(cal_lin, main = "linear", 
+     xlab = "predicted wage", ylab = "observed wage")
+
+plot(cal_spline, main = "spline", 
+     xlab = "predicted wage", ylab = "observed wage")
+
+par(mfrow = c(1, 1))
+```
+
+The spline model seems to have slight deviation at it's early values and therfore slight systematic miscalibration.
+
+# Question 5
+
+Based on the following:
+- Our initial answer to question 1 showed that there was non linear relationship.
+- The spline model in question 3 had a lower mean squared error than the linear model.
+- Although the spline model in question 4 had slight miscalibration, it is still well calibrated in terms of fitting the 45 degree line.
+
