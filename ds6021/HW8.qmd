@@ -1,0 +1,127 @@
+# Homework 8
+
+```{r}
+library(glmnet)
+library(pls)
+riboflavin <- readRDS("riboflavin.rds")
+
+X <- riboflavin$x
+y <- riboflavin$y 
+```
+
+# Question 1
+```{r}
+d_full <- data.frame(y = y, x = X)
+fit_ols <- lm(y ~ ., data = d_full)
+
+sum(is.na(coef(fit_ols)))
+```
+We get 4018 NA coefficients. This is because there is a smaller sample size compared to the number of predictors. This is found as n-1 coefficients so the remaining coefficients are left as NA after calucating this formula.
+
+# Question 2
+
+```{r}
+set.seed(7)
+
+cv_ridge <- cv.glmnet(X, y, alpha = 0, nfolds = 10)
+
+cv_ridge$lambda.min
+cv_ridge$lambda.1se
+plot(cv_ridge)
+```
+
+As lambda increases, the mean squared error decreases on our log converted plot.
+
+# Question 3
+```{r}
+fit_ridge <- glmnet(X, y, alpha = 0)
+
+plot(fit_ridge, xvar = "lambda", label = FALSE, 
+     main = "Ridge Coefficient Path")
+```
+
+Based on our plot, the coefficients start at various values and slowly converge to 0 as lambda increase. Based on the number of coefficients, we can see that all 4088 coefficients are still retained. This means that no coefficient actually reaches 0.
+
+# Question 4
+```{r}
+set.seed(7)
+cv_lasso <- cv.glmnet(X, y, alpha = 1, nfolds = 10)
+
+lasso_coefs <- coef(cv_lasso, s = "lambda.1se")
+features_retained <- sum(lasso_coefs != 0) - 1 
+print(features_retained)
+
+par(mfrow = c(1, 2))
+plot(cv_lasso, main = "Lasso CV Error")
+fit_lasso <- glmnet(X, y, alpha = 1)
+plot(fit_lasso, xvar = "lambda", main = "Lasso Path")
+par(mfrow = c(1, 1))
+```
+
+# Question 5
+
+```{r}
+set.seed(7)
+alphas <- c(0.25, 0.5, 0.75)
+
+en_results <- data.frame(
+  Alpha = numeric(),
+  Lambda_min = numeric(),
+  CV_MSE = numeric(),
+  Features_Selected = numeric()
+)
+
+for (a in alphas) {
+  set.seed(7) 
+  cv_en <- cv.glmnet(X, y, alpha = a, nfolds = 10)
+  
+  best_mse <- min(cv_en$cvm)
+  best_lambda <- cv_en$lambda.min
+  
+  en_coefs <- coef(cv_en, s = "lambda.min")
+  features <- sum(en_coefs != 0) - 1
+  en_results <- rbind(en_results, data.frame(
+    Alpha = a,
+    Lambda_min = best_lambda,
+    CV_MSE = best_mse,
+    Features_Selected = features
+  ))
+}
+
+print(en_results)
+```
+
+Alpha 0.25 shows the lowest CV-MSE. There are generally more features for all values of alpha compared to the lasso.
+
+# Question 6
+
+```{r}
+set.seed(7)
+fit_pcr <- pcr(y ~ x, data = riboflavin, scale = TRUE, validation = "CV")
+
+validationplot(fit_pcr, val.type = "MSE", main = "PCR: CV MSE")
+msep_vals <- MSEP(fit_pcr)$val[1, 1, ]
+k_opt <- which.min(msep_vals) - 1
+print(k_opt)
+beta_pcr <- coef(fit_pcr, ncomp = k_opt)
+
+pred_1 <- predict(fit_pcr, newdata = riboflavin$x[1, , drop=FALSE], ncomp = k_opt)
+print(pred_1)
+```
+
+Because each k principal component is used to build the model for the 4088 coeffecients, each gene expression value must be measured/used to calculate the new model.
+
+# Question 7
+
+```{r}
+c(
+  Ridge = min(cv_ridge$cvm),
+  Lasso = min(cv_lasso$cvm),
+  ElasticNet = min(cv_en$cvm),
+  PCR = min(msep_vals)
+)
+```
+
+The lasso method achieves the lowest CV-MSE on the riboflavin dataset.
+
+Based on the results, the lasso method works better here. Not only is the CV-MSE lower than the ridge method, it also has fewer selected features that makes it focus on predictors that change the outcome more meaningfully.

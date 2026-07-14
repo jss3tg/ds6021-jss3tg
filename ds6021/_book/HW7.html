@@ -68,7 +68,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
-<link href="./references.html" rel="next">
+<link href="./HW8.html" rel="next">
 <link href="./HW6.html" rel="prev">
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
@@ -207,6 +207,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="./HW8.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Homework 8</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="./references.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">References</span></a>
   </div>
@@ -325,6 +331,7 @@ Attaching package: 'car'</code></pre>
 </div>
 </div>
 </div>
+<p>Based on the age and wage relationship, there is a slight non linear relationship.</p>
 </section>
 <section id="question-2" class="level1" data-number="11">
 <h1 data-number="11"><span class="header-section-number">11</span> Question 2</h1>
@@ -342,6 +349,7 @@ Attaching package: 'car'</code></pre>
 </div>
 </div>
 </div>
+<p>There is a large difference in the implied curve compared to the linear fit. The implied curve has a large increase until around age 40, and then a gradual decrease.</p>
 </section>
 <section id="question-3" class="level1" data-number="12">
 <h1 data-number="12"><span class="header-section-number">12</span> Question 3</h1>
@@ -376,6 +384,7 @@ Attaching package: 'car'</code></pre>
 <pre><code>spline model: 1239.019 </code></pre>
 </div>
 </div>
+<p>Yes, based on the mse values, the spline model has a lower mean squared error than the linear model.</p>
 </section>
 <section id="question-4" class="level1" data-number="13">
 <h1 data-number="13"><span class="header-section-number">13</span> Question 4</h1>
@@ -410,10 +419,11 @@ n=3000   Mean absolute error=0.84   Mean squared error=2.02593
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
+<p>The spline model seems to have slight deviation at it’s early values and therfore slight systematic miscalibration.</p>
 </section>
 <section id="question-5" class="level1" data-number="14">
 <h1 data-number="14"><span class="header-section-number">14</span> Question 5</h1>
-<p>R creates ultimately 3 additional indicator variables as that would represent each of the 4 levels. Based on alphabetical order, the northeast would be the reference level.</p>
+<p>Based on the following: - Our initial answer to question 1 showed that there was non linear relationship. - The spline model in question 3 had a lower mean squared error than the linear model. - Although the spline model in question 4 had slight miscalibration, it is still well calibrated in terms of fitting the 45 degree line.</p>
 
 
 </section>
@@ -826,8 +836,8 @@ n=3000   Mean absolute error=0.84   Mean squared error=2.02593
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="./references.html" class="pagination-link" aria-label="References">
-        <span class="nav-page-text">References</span> <i class="bi bi-arrow-right-short"></i>
+      <a href="./HW8.html" class="pagination-link" aria-label="Homework 8">
+        <span class="nav-page-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Homework 8</span></span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>
