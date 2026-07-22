@@ -1,0 +1,202 @@
+# Homework 9
+
+```{r}
+library(NHANES)
+library(rms)
+library(dplyr)
+library(glmnet)
+library(plotly)
+library(knitr)
+
+d1 <- NHANES |> 
+  select(Weight, Age, Height, Race1) |> 
+  na.omit() |> 
+  as.data.frame()
+
+dd1 <- datadist(d1)
+options(datadist = "dd1")
+height_knots <- attr(rcs(d1$Height, 4), "parms")
+```
+
+# Question 1
+```{r}
+set.seed(7)
+K <- 10
+n <- nrow(d1)
+
+fold_id <- sample(rep(1:K, length.out = n))
+cv_mse_shared <- rep(NA, K)
+cv_mse_offset <- rep(NA, K)
+cv_mse_int <- rep(NA, K)
+cv_mse_sep <- rep(NA, K)
+
+for (k in 1:K) {
+  train <- d1[fold_id != k, ]
+  test  <- d1[fold_id == k, ]
+  
+  fit_shared <- ols(Weight ~ rcs(Height, height_knots), data = train)
+  fit_offset <- ols(Weight ~ rcs(Height, height_knots) + Race1, data = train)
+  fit_int <- ols(Weight ~ rcs(Height, height_knots) * Race1, data = train)
+  
+  cv_mse_shared[k] <- mean((predict(fit_shared, test) - test$Weight)^2)
+  cv_mse_offset[k] <- mean((predict(fit_offset, test) - test$Weight)^2)
+  cv_mse_int[k] <- mean((predict(fit_int, test) - test$Weight)^2)
+  
+  sep_preds <- rep(NA, nrow(test))
+  for (r in levels(train$Race1)) {
+    train_g <- train[train$Race1 == r, ]
+    test_g <- test[test$Race1 == r, ]
+    if (nrow(test_g) > 0) {
+      fit_sep <- ols(Weight ~ rcs(Height, height_knots), data = train_g)
+      sep_preds[test$Race1 == r] <- predict(fit_sep, test_g)
+    }
+  }
+  cv_mse_sep[k] <- mean((sep_preds - test$Weight)^2)
+}
+
+data.frame(model = c("Fully shared", "Shared shape", 
+                     "Full interaction", "Fully separate"),
+           CV_MSE = c(mean(cv_mse_shared), mean(cv_mse_offset), 
+                      mean(cv_mse_int), mean(cv_mse_sep))) |>
+  kable(digits = 3)
+```
+
+Based on the CV_MSE that we calculated for each race, the Full interaction and the Fully separate models have the lowest CV_MSE. 
+
+# Question 2
+
+```{r}
+d2 <- NHANES |> select(Weight, Height, Age, Race1) |> na.omit() |> as.data.frame()
+dd2 <- datadist(d2)
+options(datadist = "dd2")
+
+height_knots <- attr(rcs(d2$Height, 4), "parms")
+age_knots <- attr(rcs(d2$Age, 4), "parms")
+```
+```{r}
+set.seed(7)
+K <- 10
+n <- nrow(d2)
+fold_id <- sample(rep(1:K, length.out = n))
+cv_mse_add <- rep(NA, K)
+cv_mse_int <- rep(NA, K)
+
+for (k in 1:K) {
+  train <- d2[fold_id != k, ]
+  test <- d2[fold_id == k, ]
+  fit_add_k <- ols(Weight ~ rcs(Height, height_knots) * rcs(Age, age_knots) + Race1, data = train)
+  fit_int_k <- ols(Weight ~ rcs(Height, height_knots) * rcs(Age, age_knots) * Race1, data = train)
+  cv_mse_add[k] <- mean((predict(fit_add_k, test) - test$Weight)^2)
+  cv_mse_int[k] <- mean((predict(fit_int_k, test) - test$Weight)^2)
+}
+
+data.frame(model = c("Additive-in-group", "Interactive-in-group"),
+           CV_MSE = c(mean(cv_mse_add), mean(cv_mse_int))) |>
+  kable(digits = 3)
+```
+```{r}
+fit_surf_int <- ols(Weight ~ rcs(Height, height_knots) * rcs(Age, age_knots) * Race1, data = d2)
+
+h_g <- seq(min(d2$Height), max(d2$Height), length.out = 40)
+a_g <- seq(min(d2$Age), max(d2$Age), length.out = 40)
+grid_ha <- expand.grid(Height = h_g, Age = a_g)
+rdb <- list(c(0, "steelblue"), c(0.5, "white"), c(1, "firebrick"))
+
+grid_Black <- cbind(grid_ha, Race1 = factor("Black", levels = levels(d2$Race1)))
+grid_Hispanic <- cbind(grid_ha, Race1 = factor("Hispanic", levels = levels(d2$Race1)))
+grid_Mexican <- cbind(grid_ha, Race1 = factor("Mexican", levels = levels(d2$Race1)))
+grid_White <- cbind(grid_ha, Race1 = factor("White", levels = levels(d2$Race1)))
+grid_Other <- cbind(grid_ha, Race1 = factor("Other", levels = levels(d2$Race1)))
+
+z_Black    <- matrix(predict(fit_surf_int, grid_Black), nrow = 40)
+z_Hispanic <- matrix(predict(fit_surf_int, grid_Hispanic), nrow = 40)
+z_Mexican  <- matrix(predict(fit_surf_int, grid_Mexican), nrow = 40)
+z_White    <- matrix(predict(fit_surf_int, grid_White), nrow = 40)
+z_Other    <- matrix(predict(fit_surf_int, grid_Other), nrow = 40)
+
+make_scene <- function(z_fit, title, scene_id) {
+  plot_ly(x = ~h_g, y = ~a_g, z = ~z_fit,
+          colorscale = rdb, showscale = FALSE, scene = scene_id) |>
+    add_surface(opacity = 0.9) |>
+    plotly::layout(annotations = list(text = title, showarrow = FALSE, x = 0.5, y = 1),
+                   scene = list(xaxis = list(title = "Height"),
+                                yaxis = list(title = "Age"),
+                                zaxis = list(title = "Weight")))
+}
+
+p_Black <- make_scene(z_Black, "Black: interactive-in-group fit", "scene1")
+p_Hispanic <- make_scene(z_Hispanic, "Hispanic: interactive-in-group fit", "scene2")
+p_Mexican <- make_scene(z_Mexican, "Mexican: interactive-in-group fit", "scene3")
+p_White <- make_scene(z_White, "White: interactive-in-group fit", "scene4")
+p_Other <- make_scene(z_Other, "Other: interactive-in-group fit", "scene5")
+
+p_Black
+p_Hispanic
+p_Mexican
+p_White
+p_Other
+
+```
+
+As lambda increases, the mean squared error decreases on our log converted plot.
+
+# Question 3
+```{r}
+d_reg <- d1
+contrasts(d_reg$Race1) <- contr.sum(nlevels(d_reg$Race1))
+form_reg <- Weight ~ rcs(Height, height_knots) * Race1
+X_full <- model.matrix(form_reg, data = d_reg)
+y <- d_reg$Weight
+
+term_labels <- attr(terms(form_reg), "term.labels")
+assign_vec  <- attr(X_full, "assign")
+dev_terms   <- grep("Race1", term_labels)
+pf_full     <- ifelse(assign_vec %in% dev_terms, 1, 0)
+X_glmnet    <- X_full[, -1]
+pf          <- pf_full[-1]
+
+```
+```{r}
+set.seed(7)
+cv_ridge <- cv.glmnet(X_glmnet, y, alpha = 0, penalty.factor = pf, nfolds = 10)
+cv_lasso <- cv.glmnet(X_glmnet, y, alpha = 1, penalty.factor = pf, nfolds = 10)
+
+beta_lasso_min <- coef(cv_lasso, s = "lambda.min")[-1, 1]
+race_levels    <- levels(d_reg$Race1)
+race_main_idx  <- which(assign_vec[-1] == dev_terms[1])
+race_int_idx   <- which(assign_vec[-1] == dev_terms[2])
+
+dev_mat <- matrix(NA_real_, nrow = length(race_levels), ncol = 4,
+                  dimnames = list(race_levels, c("main", "height", "height'", "height''")))
+for (j in 1:4) {
+  cols <- c(race_main_idx[j], race_int_idx[(3 * (j - 1) + 1):(3 * j)])
+  dev_mat[j, ] <- beta_lasso_min[cols]
+}
+dev_mat[5, ] <- -colSums(dev_mat[1:4, , drop = FALSE])
+n_nonzero <- rowSums(dev_mat != 0)
+status <- ifelse(n_nonzero == 0, "Fully pooled",
+          ifelse(n_nonzero == 4, "Not pooled", "Partially pooled"))
+
+data.frame(Race1 = race_levels, n = as.numeric(table(d_reg$Race1)[race_levels]),
+           `Nonzero deviation coefficients (of 4)` = n_nonzero, Status = status, check.names = FALSE) |>
+  kable(row.names = FALSE)
+```
+
+Only Other was not pooled at all. The other races were partially pooled. We can see that some of the deviation coefficients were set to 0 for these.
+
+# Question 4
+One-paragraph conclusion: does your dataset support a fully shared, fully separate, or regularized in-between model for the grouping variable you chose? Justify using both predictive evidence (CV-MSE across the ladder and the regularized fit) and interpretive evidence (which groups’ coefficients/curves shrank the most, and whether that tracked group size, distinctiveness of the group’s curve, or something else — be honest if the pattern doesn’t look clean).
+
+Based on our data, the CV-MSE was lowest for the Fully separate and Full interaction models. In our interpretive evidence, we can identify that the Interactiv-in-group model had a lowers MSE. This tells us that the groups have variation among the different races. We showed this by fitting our model on the lasso model and we can see that although all parameters are partially pooled, we can still find distinction between the races. We can identify that the Fully separate or Full interaction model show that the penalty for these models provides the best fit for the data and its parameters.
+
+# Question 5
+
+```{r}
+X <- model.matrix(~Race1, data = d1)
+Z <- model.matrix(~Race1, data = d_reg)
+
+R_inv <- solve(crossprod(Z)) %*% crossprod(Z, X)
+
+R <- round(R_inv, 4)
+print(R)
+```
