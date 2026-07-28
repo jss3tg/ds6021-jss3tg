@@ -1,0 +1,70 @@
+# Homework 10
+
+# Question 1
+The source of uncertainty that applies here is measurement error.
+The gestational age of the menstrual period can be inaccurate because the maternal recall is imprecise. This means that the gestational age is not measured correctly, which can lead to bias in the regression model. Collecting a larger sample would not fix the problem because the measurement error is inherent and not random, so it would still affect the accuracy of the results.
+
+# Question 2
+The parametric recipe would be the least trustworthy here because it assumes that the weather residuals are normally distributed with the same variance. The bootstrap would be more trustworthy because it does not make the same assumptions as the parametric recipe. 
+
+# Question 3
+```{r}
+boot_lm <- function(formula, data, B = 2000) {
+  n           <- nrow(data)
+  fit0        <- lm(formula, data = data)
+  coef_names  <- names(coef(fit0))
+  boot_coefs  <- matrix(NA_real_, nrow = B, ncol = length(coef_names),
+                         dimnames = list(NULL, coef_names))
+
+  for (b in 1:B) {
+    idx              <- sample(seq_len(n), n, replace = TRUE)
+    boot_coefs[b, ]  <- coef(lm(formula, data = data[idx, ]))
+  }
+  boot_coefs
+}
+```
+```{r}
+set.seed(7)
+aq  <- na.omit(airquality[, c("Ozone", "Temp", "Wind", "Solar.R")])
+fit <- lm(Ozone ~ Temp + Wind, data = aq)
+
+boot_coefs <- boot_lm(Ozone ~ Temp + Wind, data = aq, B = 2000)
+boot_ci <- quantile(boot_coefs[, "Wind"], probs = c(0.025, 0.975))
+
+classical_ci <- confint(fit)["Wind", ]
+
+X <- model.matrix(fit)
+ehat <- residuals(fit)
+bread <- solve(t(X) %*% X)
+meat <- t(X) %*% diag(ehat^2) %*% X
+vcov_hw <- bread %*% meat %*% bread
+
+se_robust_wind <- sqrt(vcov_hw["Wind", "Wind"])
+t_crit <- qt(0.975, df = fit$df.residual)
+beta_wind <- coef(fit)["Wind"]
+robust_ci <- beta_wind + c(-1, 1) * t_crit * se_robust_wind
+
+rbind(Bootstrap = boot_ci, Classical = classical_ci, Robust = robust_ci)
+```
+
+All three roughly agree. The three intervals are below zero, meaning that the wind has a statistically significant effect on the ozone levels. The wider sandwich interval shows that the data is heteroscedastic. This means that the error variance is considered constant in the classical interval due to its smaller sandwich interval. The other two are wider, meaning that the data is being less variable.
+
+# Question 4
+Using the mean response causes the data to have a larger variance and the data to have an incorrect representation of what weather a new day would have. The confidence interval of 95% would not represent what a random new day would be like.
+
+```{r}
+predict(fit, newdata = data.frame(Temp = 90, Wind = mean(aq$Wind)), interval = "prediction")
+```
+
+This interval would be wider because it uses the prediction interval which would account for the right variability of the data.
+
+# Question 5
+To test whether the shape of the age–blood-pressure curve differs by gender, we would compare the full model of BPSysAve ~ rcs(Age, age_knots) * Gender to the reduced model of BPSysAve ~ rcs(Age, age_knots) + Gender. We would have k -  1 degrees of freedom because q = k - 1, where k would be our knots in the cubic spline.
+```{r}
+fit_reduced <- lm(Ozone ~ Temp + Wind, data = aq)
+fit_full <- lm(Ozone ~ Temp * Wind, data = aq)
+
+anova(fit_reduced, fit_full)
+```
+
+Based on this, the Pr(>F) values is 0.0001227. This means that our p-value is less than 0.05, which is enough to reject the null hypothesis and that temperature is affected by the wind speed.
